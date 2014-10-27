@@ -18,45 +18,48 @@ func main() {
 
 	addr, err := net.ResolveUDPAddr("udp", addrString)
 	if err != nil {
-		log.Fatal("Unable to parse address provided.")
+		log.Fatal("Unable to parse address provided: %s", err)
 	}
 
 	conn, err = net.DialUDP("udp", nil, addr)
 	if err != nil {
-		log.Fatal("Unable to open connection to address provided.")
+		log.Fatal("Unable to open connection %s", err)
 	}
-	/*
-		err = conn.Close()
+
+	// Give us a target to sink 
+	go func() {
+		udpAddress, err := net.ResolveUDPAddr("udp",addrString)
 		if err != nil {
-			log.Fatal("Unable to close connection ", err)
+			log.Fatal("Unable to resolve address %s", err)
 		}
-	*/
+		recvConn ,err := net.ListenUDP("udp", udpAddress)
+		defer recvConn.Close()
+		if err != nil {
+			log.Fatal("Unable to listen: %s", err)
+		}
+
+		var buf []byte = make([]byte, 1024)
+		for {
+			n, _, err := recvConn.ReadFromUDP(buf)
+			if err != nil {
+				log.Fatal("Unable to read: %s", err)
+			}
+			if true {
+				log.Printf("Server: Received message: %s", string(buf[0:n]))
+			}
+			time.Sleep(1000*time.Millisecond)
+		}
+	}()
 
 	defer conn.Close()
 	for {
-		// Do things
+
 		b := []byte("PACKET_CONTENTS\n")
-		// Options for sending:
-		// Write
+
 		n, err := conn.Write(b)
 		if err != nil || n != len(b) {
-			log.Printf("Failed to send packet ", err.Error())
+			log.Printf("Client: Failed to send packet: %s", err)
 		}
-		// WriteMsgUDP - Fails if already connected
-		/*
-			n, _, err := conn.WriteMsgUDP(b, nil, addr)
-			if err != nil || n != len(b) {
-				log.Fatal("Failed to send packet", err)
-			}
-		*/
-		// WriteTo - alias to WriteToUDP
-		// WriteToUDP - Fails if already connected
-		/*
-			n, err := net.UDPConn.WriteToUDP(b, addr)
-			if err != nil || n != len(b) {
-				log.Fatal("Failed to send packet", err)
-			}
-		*/
 
 		time.Sleep(1000 * time.Millisecond)
 	}
